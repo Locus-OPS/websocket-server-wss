@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat Client</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #chat {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px;
+            border: 1px solid #ccc;
+            margin: 10px;
+            height: 60vh;
+            background-color: aqua;
+        }
+
+        #message-form {
+            display: flex;
+            padding: 10px;
+        }
+
+        #message-form input {
+            flex: 1;
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: calc(50% - 30px);
+        }
+
+        #message-form button {
+            margin-left: 10px;
+            padding: 10px;
+            font-size: 1rem;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        #message-form button:hover {
+            background-color: #218838;
+        }
+
+        #user-id,#partner-id, #room-id{
+            margin: 10px;
+            padding: 10px;
+            font-size: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: calc(50% - 30px);
+        }
+    </style>
+</head>
+<body>
+    <h1>WebSocket Chat Client</h1>
+    <label>Your User ID (ผู้ส่ง)</label>
+    <input type="text" id="user-id" placeholder="Enter your User ID">
+    <label>Partner ID (ผู้รับ)</label>
+    <input type="text" id="partner-id" placeholder="Enter your partner-id">
+    <label>Room ID (ห้องรวม)</label>
+    <input type="text" id="room-id" placeholder="Enter Room ID">
+
+    <div id="chat"></div>
+
+    <form id="message-form">
+        <input type="text" id="message-input" placeholder="Type your message...">
+        <button type="submit">Send</button>        
+    </form>
+    <div id="remark">
+        <p> ฟังก์ชันในหน้าจอ Client  </p>
+            1.Input User ID และ Room ID:
+            <li>   ผู้ใช้กรอก User ID และ Room ID เพื่อระบุตัวตนและเข้าร่วมห้อง</li>
+            2.ฟอร์มส่งข้อความ:
+            <li>    กรอกข้อความและเลือกส่งไปที่ห้อง (Group Message) หรือหาเพื่อน (Private Message)</li>
+            3.ระบบแสดงข้อความ:
+            <li>    แสดงข้อความจากเซิร์ฟเวอร์ทั้ง System, Private, และ Group</li>
+            4.ฟีเจอร์ JavaScript:
+            <li>     จัดการการเชื่อมต่อ WebSocket</li>
+            <li>     ส่งข้อความตามประเภท</li>
+            <li>     แสดงข้อความบนหน้าจอแบบเรียลไทม์</li>
+       
+    </div>
+    <script>
+        const ws = new WebSocket('ws://localhost:4000');
+        const chat = document.getElementById('chat');
+        const userIdInput = document.getElementById('user-id');
+        const roomIdInput = document.getElementById('room-id');
+        const partnerIdInput = document.getElementById('partner-id');
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+
+        let userId = '';
+        let roomId = '';
+        let partnerId ='';
+
+        ws.onopen = () => {
+            appendMessage('System: Connected to the server.');
+        };
+
+        ws.onmessage = (event) => {
+            const message = JSON.parse(event.data);
+            switch (message.type) {
+                case 'system':
+                    appendMessage(`System: ${message.message}`);
+                    break;
+                case 'privateMessage':
+                    appendMessage(`Private from ${message.from}: ${message.content}`);
+                    break;
+                case 'groupMessage':
+                    appendMessage(`Group [${message.room}] ${message.from}: ${message.content}`);
+                    break;
+                default:
+                    appendMessage(`Unknown: ${event.data}`);
+            }
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+        };
+
+        ws.onclose = () => {
+            appendMessage('System: Disconnected from the server.');
+        };
+
+        userIdInput.addEventListener('change', () => {
+            userId = userIdInput.value;
+            if (userId) {
+                ws.send(JSON.stringify({ type: 'register', userId }));
+            }
+        });
+
+        roomIdInput.addEventListener('change', () => {
+            roomId = roomIdInput.value;
+            if (roomId) {
+                ws.send(JSON.stringify({ type: 'joinRoom', userId, roomId }));
+            }
+        });
+     
+
+        partnerIdInput.addEventListener('change', () => {
+            partnerId = partnerIdInput.value;             
+        });
+
+        messageForm.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const message = messageInput.value;
+            if (roomId) {
+                ws.send(JSON.stringify({ type: 'groupMessage', roomId, fromUserId: userId, content: message }));
+            } else {
+                console.log("partnerId ",partnerId);
+                if(!partnerId){
+                    ws.send(JSON.stringify({ type: 'privateMessage', toUserId: prompt('Enter recipient userId:'), fromUserId: userId, content: message }));
+                }else{
+                    ws.send(JSON.stringify({ type: 'privateMessage', toUserId:partnerId, fromUserId: userId, content: message }));
+                }
+                
+                
+            }
+            messageInput.value = '';
+        });
+
+        function appendMessage(message) {
+            const messageElement = document.createElement('div');
+            messageElement.textContent = message;
+            chat.appendChild(messageElement);
+            chat.scrollTop = chat.scrollHeight;
+        }
+    </script>
+    
+</body>
+</html>
