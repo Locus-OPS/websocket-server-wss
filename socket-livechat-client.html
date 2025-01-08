@@ -158,17 +158,23 @@
             const message = messageInput.value;
             if (roomId) {
                 ws.send(JSON.stringify({ type: 'groupMessage', roomId, fromUserId: userId, content: message }));
+                appendMessage(`Group [${roomId}] ${userId}: ${message}`);
             } else {
                 console.log("partnerId ",partnerId);
                 if(!partnerId){
                     ws.send(JSON.stringify({ type: 'privateMessage', toUserId: prompt('Enter recipient userId:'), fromUserId: userId, content: message }));
                 }else{
                     ws.send(JSON.stringify({ type: 'privateMessage', toUserId:partnerId, fromUserId: userId, content: message }));
+                    appendMessage(`Private from ${userId}: ${message}`);
+
                 }
                 
                 
             }
-            messageInput.value = '';
+              
+             
+            
+             messageInput.value = '';
         });
 
         function appendMessage(message) {

@@ -69,6 +69,7 @@ wss.on('connection', (ws) => {
                 case 'privateMessage': {
                     // ส่งข้อความแบบ 1:1
                     const { toUserId, fromUserId, content } = message;
+                   //ผู้รับ recipient
                     const recipient = users.get(toUserId);
                     if (recipient && recipient.readyState === WebSocket.OPEN) {
                         recipient.send(JSON.stringify({ type: 'privateMessage', from: fromUserId, content }));
